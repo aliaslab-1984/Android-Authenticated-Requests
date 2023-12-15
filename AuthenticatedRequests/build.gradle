@@ -2,7 +2,6 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'maven-publish'
-    id 'com.jfrog.artifactory'
 }
 
 def libraryVersion = '1.0.8'
@@ -65,7 +64,11 @@ publishing {
         aar(MavenPublication) {
             groupId 'net.aliaslab'
             version libraryVersion
-            artifactId project.getName()
+
+            def debugAsset = "${project.getName()}-DEBUG"
+            def snapshotAsset = "${project.getName()}-SNAP"
+            def asset = libraryVersion.endsWith('SNAP') ? snapshotAsset : libraryVersion.endsWith('DEBUG') ? debugAsset : project.getName()
+            artifactId(asset)
 
             if (libraryVersion.endsWith('DEBUG')) {
                 artifact("$buildDir/outputs/aar/${project.getName()}-codedebug.aar")
@@ -84,24 +87,15 @@ publishing {
             }
         }
     }
-}
 
-artifactory {
-    contextUrl = 'https://artifactory-new.aliaslab.net/artifactory'
-    publish {
-        repository {
-            repoKey = libraryVersion.endsWith('SNAPSHOT') ? 'AuthenticatedRequests_Android_Snapshot' : libraryVersion.endsWith('DEBUG') ? 'AuthenticatedRequests_Android_Debug' : 'AuthenticatedRequests_Android_Release'
-
-            username = project.findProperty('artifactoryUser') ?: 'user'
-            password = project.findProperty('artifactoryPassword') ?: 'password'
-        }
-        defaults {
-            // Tell the Artifactory Plugin which artifacts should be published to Artifactory.
-            publications('aar')
-            publishArtifacts = true
-
-            // Publish generated POM files to Artifactory (true by default)
-            publishPom = true
+    repositories {
+        maven {
+            name = 'trust-mobile-m2'
+            url = "https://nexus.ts-paas.com/repository/trust-mobile-m2"
+            credentials {
+                username project.findProperty('nexusUser') ?: 'user'
+                password project.findProperty('nexusPassword') ?: 'password'
+            }
         }
     }
 }
